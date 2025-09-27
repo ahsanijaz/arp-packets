@@ -4,6 +4,7 @@ use pnet::packet::arp::{Arp, ArpOperations, ArpPacket, MutableArpPacket};
 use pnet::packet::ethernet::{EtherTypes, Ethernet, EthernetPacket, MutableEthernetPacket};
 use std::env;
 use std::net::Ipv4Addr;
+use std::time::{Duration, Instant};
 
 const ETHERNET_FRAME_SIZE: usize = 42; // ARP Packet (28) + Ethernet Header (14)
 
@@ -66,11 +67,15 @@ fn main() {
 
     // Send the packet
     tx.send_to(ethernet_packet.packet(), None);
+    let start_time = Instant::now();
     println!("Sent ARP request to {}", target_ip);
 
     // Wait for a reply
     println!("Waiting for ARP reply...");
     loop {
+        if start_time.elapsed() > Duration::from_secs(2) {
+            panic!("Timeout: No ARP reply received from {}", target_ip);
+        }
         match rx.next() {
             Ok(packet) => {
                 let ethernet_frame = EthernetPacket::new(packet).unwrap();
